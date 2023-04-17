@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html>
+<body>
+<?php
+$txt = "PHP";
+echo "I love $txt!";
+?>
+<?php
+session_start();
+// check if user is already logged in
+if(isset($_SESSION['user_id'])) {
+header("Location: dashboard.php");
+exit;
+}
+// handle form submission
+if($_SERVER['REQUEST_METHOD'] == 'POST') {
+// check if login form submitted
+if(isset($_POST['login'])) {
+$mobile_number = $_POST['mobile_number'];
+// generate OTP and send to user's mobile number
+$otp = generate_otp(); // implement generate_otp function to generate a random OTP and send to
+user's mobile number
+function generate_otp() {
+// generate random 6-digit OTP
+$otp = rand(100000, 999999);
+// send OTP to user's mobile number
+$mobile_number = $_SESSION['mobile_number'];
+// send OTP via Twilio SMS gateway API
+$account_sid = 'your_account_sid';
+$auth_token = 'your_auth_token';
+$twilio_number = 'your_twilio_number';
+$client = new Twilio\Rest\Client($account_sid, $auth_token);
+$client->messages->create(
+$mobile_number,
+array(
+'from' => $twilio_number,
+'body' => 'Your OTP is: ' . $otp
+)
+);
+return $otp;
+}
+$_SESSION['otp'] = $otp;
+$_SESSION['mobile_number'] = $mobile_number;
+}
+// check if form submitted after OTP verification
+else if(isset($_POST['submit'])) {
+// verify OTP entered by user
+$otp_entered = $_POST['otp'];
+if($otp_entered == $_SESSION['otp']) {
+// OTP matched, log user in
+$name = $_POST['name'];
+$contact = $_POST['contact'];
+$address = $_POST['address'];
+$type = $_POST['type'];
+// save user details to database and log user in
+$user_id = save_user_details($name, $contact, $address, $type); // implement
+save_user_details function to save user details to database and return the user ID
+$_SESSION['user_id'] = $user_id;
+header("Location: dashboard.php");
+exit;
+}
+else {
+// OTP did not match, show error message
+$error_message = "Invalid OTP. Please try again.";
+}
+}
+}
+// display login form
+?>
+<form method="post">
+<label>Mobile Number:</label>
+<input type="text" name="mobile_number" required>
+<button type="submit" name="login">Login</button>
+<?php if(isset($_SESSION['otp'])) { ?>
+<label>OTP:</label>
+<input type="text" name="otp" required>
+<button type="submit" name="submit">Submit</button>
+<?php } ?>
+<?php if(isset($error_message)) { ?>
+<p><?php echo $error_message; ?></p>
+<?php } ?>
+<label>Name:</label>
+<input type="text" name="name" required>
+<label>Contact:</label>
+<input type="text" name="contact" required>
+<label>Address:</label>
+<input type="text" name="address" required>
+<label>Type:</label>
+<select name="type">
+<option value="producer">Producer</option>
+<option value="buyer">Buyer</option>
+</select>
+<button type="submit" name="submit">Submit</button>
+</form>
+</body>
+</html>
